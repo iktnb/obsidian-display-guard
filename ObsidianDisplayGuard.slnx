@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ObsidianDisplayGuard/ObsidianDisplayGuard.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ObsidianDisplayGuard.Tests/ObsidianDisplayGuard.Tests.csproj" />
+    <Project Path="tests/WindowHarness/WindowHarness.csproj" />
+  </Folder>
+</Solution>
