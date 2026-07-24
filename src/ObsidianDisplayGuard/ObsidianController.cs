@@ -82,6 +82,13 @@ public sealed class ObsidianController
                PathsEqual(window.ProcessPath, config.ObsidianExePath);
     }
 
+    public bool IsObsidianWindow(nint windowHandle, GuardConfig config)
+    {
+        var window = _inspector.TryInspect(windowHandle);
+        return window is not null &&
+               PathsEqual(window.ProcessPath, config.ObsidianExePath);
+    }
+
     public void Restore()
     {
         if (_protectedWindow == 0 && !File.Exists(AppPaths.SessionPath))

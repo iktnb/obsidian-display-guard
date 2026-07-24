@@ -8,7 +8,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>ObsidianDisplayGuard</AssemblyName>
     <RootNamespace>ObsidianDisplayGuard</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Yurii Basiuk</Authors>
     <Description>Protect a secondary Windows monitor for a fullscreen Obsidian window.</Description>
     <PublishSingleFile>true</PublishSingleFile>

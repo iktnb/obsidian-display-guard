@@ -30,6 +30,8 @@ public sealed class ConfigStoreTests : IDisposable
                 Height = 1080
             },
             LaunchAtSignIn = true,
+            IdleOverlayEnabled = true,
+            IdleOverlayDelayMinutes = 7,
             ProtectionEnabled = true
         };
 
@@ -38,7 +40,43 @@ public sealed class ConfigStoreTests : IDisposable
 
         Assert.Equal(config.VaultName, loaded.VaultName);
         Assert.Equal(config.ProtectedMonitor.HardwareIdHash, loaded.ProtectedMonitor.HardwareIdHash);
+        Assert.True(loaded.IdleOverlayEnabled);
+        Assert.Equal(7, loaded.IdleOverlayDelayMinutes);
         Assert.True(loaded.ProtectionEnabled);
+    }
+
+    [Fact]
+    public void PreviousConfigurationGetsSafeIdleScreenDefaults()
+    {
+        File.WriteAllText(
+            _configPath,
+            """
+            {
+              "schemaVersion": 1,
+              "obsidianExePath": "C:\\Apps\\Obsidian\\Obsidian.exe",
+              "protectedMonitor": {
+                "deviceId": "MONITOR\\EXAMPLE1234"
+              },
+              "protectionEnabled": true
+            }
+            """);
+        var store = new ConfigStore(_logger, _configPath);
+
+        var loaded = store.Load();
+
+        Assert.True(loaded.IdleOverlayEnabled);
+        Assert.Equal(5, loaded.IdleOverlayDelayMinutes);
+    }
+
+    [Theory]
+    [InlineData(-10, 1)]
+    [InlineData(5, 5)]
+    [InlineData(999, 120)]
+    public void IdleDelayIsClampedToTheSupportedRange(int configuredMinutes, int expectedMinutes)
+    {
+        var config = new GuardConfig { IdleOverlayDelayMinutes = configuredMinutes };
+
+        Assert.Equal(TimeSpan.FromMinutes(expectedMinutes), config.IdleOverlayDelay);
     }
 
     [Fact]

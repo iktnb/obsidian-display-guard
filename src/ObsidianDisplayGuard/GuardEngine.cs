@@ -8,6 +8,7 @@ public sealed class GuardEngine : IDisposable
     private readonly WindowInspector _inspector;
     private readonly WindowMover _mover;
     private readonly ObsidianController _obsidian;
+    private readonly IdleOverlayController _idleOverlay;
     private readonly FileLogger _logger;
     private readonly int _ownProcessId = Environment.ProcessId;
     private readonly ConcurrentDictionary<nint, DateTimeOffset> _lastWindowEvaluation = new();
@@ -26,6 +27,7 @@ public sealed class GuardEngine : IDisposable
         WindowInspector inspector,
         WindowMover mover,
         ObsidianController obsidian,
+        IdleOverlayController idleOverlay,
         FileLogger logger)
     {
         _config = config;
@@ -33,6 +35,7 @@ public sealed class GuardEngine : IDisposable
         _inspector = inspector;
         _mover = mover;
         _obsidian = obsidian;
+        _idleOverlay = idleOverlay;
         _logger = logger;
         _enabled = config.ProtectionEnabled;
     }
@@ -44,6 +47,7 @@ public sealed class GuardEngine : IDisposable
 
     public void ApplyConfig(GuardConfig config)
     {
+        _idleOverlay.Reset();
         _obsidian.Restore();
         _config = config;
         _enabled = config.ProtectionEnabled;
@@ -73,6 +77,7 @@ public sealed class GuardEngine : IDisposable
         _resumeAt = null;
         if (!enabled)
         {
+            _idleOverlay.Reset();
             _obsidian.Restore();
             SetStatus(GuardStatus.Paused, "Protection is off");
             return;
@@ -90,6 +95,7 @@ public sealed class GuardEngine : IDisposable
         }
 
         _resumeAt = duration.HasValue ? DateTimeOffset.Now.Add(duration.Value) : DateTimeOffset.MaxValue;
+        _idleOverlay.Reset();
         _obsidian.Restore();
         SetStatus(
             GuardStatus.Paused,
@@ -110,6 +116,7 @@ public sealed class GuardEngine : IDisposable
 
     public void OnDisplaySettingsChanged()
     {
+        _idleOverlay.Reset();
         _obsidian.Restore();
         _protectedMonitor = null;
         _destinationMonitor = null;
@@ -120,6 +127,7 @@ public sealed class GuardEngine : IDisposable
     {
         if (_disposed || !_enabled)
         {
+            _idleOverlay.Reset();
             return;
         }
 
@@ -127,6 +135,7 @@ public sealed class GuardEngine : IDisposable
         {
             if (DateTimeOffset.Now < _resumeAt.Value)
             {
+                _idleOverlay.Reset();
                 return;
             }
 
@@ -135,6 +144,7 @@ public sealed class GuardEngine : IDisposable
 
         if (!ResolveTopology())
         {
+            _idleOverlay.Reset();
             return;
         }
 
@@ -142,6 +152,7 @@ public sealed class GuardEngine : IDisposable
         var protectedWindow = _obsidian.EnsureProtected(_config, _protectedMonitor!, windows);
         if (protectedWindow == 0)
         {
+            _idleOverlay.Reset();
             SetStatus(GuardStatus.Paused, "Opening Obsidian…");
             return;
         }
@@ -152,6 +163,13 @@ public sealed class GuardEngine : IDisposable
         }
 
         _mover.Prune(windows.Select(window => window.Handle).ToArray());
+        var foregroundWindow = NativeMethods.GetForegroundWindow();
+        _idleOverlay.Update(
+            _config,
+            _protectedMonitor!,
+            protectedWindow,
+            _obsidian.IsObsidianWindow(foregroundWindow, _config),
+            DateTimeOffset.Now);
         SetStatus(GuardStatus.Protected, "The secondary monitor is protected");
     }
 
@@ -186,6 +204,7 @@ public sealed class GuardEngine : IDisposable
     {
         _enabled = false;
         _resumeAt = null;
+        _idleOverlay.Reset();
         _obsidian.Restore();
         SetStatus(GuardStatus.Paused, "Emergency restore completed");
     }
@@ -268,6 +287,7 @@ public sealed class GuardEngine : IDisposable
         }
 
         _disposed = true;
+        _idleOverlay.Dispose();
         _obsidian.Restore();
     }
 }
