@@ -4,6 +4,8 @@ Turn a secondary Windows monitor into a protected, borderless Obsidian display.
 
 Obsidian Display Guard is a small Windows tray application. It keeps one interactive Obsidian window fullscreen on a selected monitor and returns other normal application windows to the primary display. It does not install a driver, run a Windows service, require administrator access, collect telemetry, or modify an Obsidian vault.
 
+When Obsidian has not been focused for the configured delay (five minutes by default), Guard can cover the protected monitor with a translucent grey-black idle screen. The Obsidian window remains visible through a Gaussian blur. Click the idle screen, or focus Obsidian with the keyboard, to return immediately.
+
 ## Safety first
 
 - Press **Ctrl+Alt+Shift+F12** at any time to pause or resume protection.
@@ -37,6 +39,8 @@ The tray menu provides protection on/off, timed pauses, immediate restore, setti
 - Identifies the selected monitor by hardware/device identity instead of only `DISPLAY1` or `DISPLAY2`.
 - Saves the original Obsidian window placement and style before applying borderless fullscreen.
 - Uses out-of-process WinEvent hooks plus a low-frequency fallback check.
+- Shows an optional blurred idle screen after Obsidian loses focus, with a configurable 1–120 minute delay.
+- Returns focus to the protected Obsidian window when the idle screen is clicked.
 - Preserves the maximized/restored state of windows returned to the primary monitor.
 - Relaunches the configured Obsidian vault after an accidental close.
 - Stores versioned configuration under `%LocalAppData%\ObsidianDisplayGuard\config.json`.
@@ -53,7 +57,7 @@ Get-FileHash .\ObsidianDisplayGuard.exe -Algorithm SHA256
 gh attestation verify .\ObsidianDisplayGuard.exe -R iktnb/obsidian-display-guard
 ```
 
-Version `0.1.0` is not Authenticode-signed. Windows SmartScreen may warn about a newly downloaded executable even when its checksum and provenance are valid.
+Version `0.2.0` is not Authenticode-signed. Windows SmartScreen may warn about a newly downloaded executable even when its checksum and provenance are valid.
 
 ## Build and test
 

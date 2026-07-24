@@ -41,7 +41,8 @@ internal sealed class GuardApplicationContext : ApplicationContext
         var inspector = new WindowInspector();
         var mover = new WindowMover(logger);
         var obsidian = new ObsidianController(inspector, logger);
-        _engine = new GuardEngine(_config, _monitorCatalog, inspector, mover, obsidian, logger);
+        var idleOverlay = new IdleOverlayController(logger);
+        _engine = new GuardEngine(_config, _monitorCatalog, inspector, mover, obsidian, idleOverlay, logger);
         _engine.StatusChanged += OnStatusChanged;
 
         _dispatcher = new Control();

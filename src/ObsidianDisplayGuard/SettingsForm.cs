@@ -9,6 +9,18 @@ internal sealed class SettingsForm : Form
     private readonly CheckBox _launchAtSignIn = new() { Text = "Start Guard and protect after Windows sign-in", AutoSize = true };
     private readonly CheckBox _relaunch = new() { Text = "Relaunch Obsidian if it closes", AutoSize = true };
     private readonly CheckBox _fullscreen = new() { Text = "Borderless fullscreen over the secondary taskbar", AutoSize = true };
+    private readonly CheckBox _idleOverlay = new()
+    {
+        Text = "Dim and blur the protected monitor when Obsidian is not focused",
+        AutoSize = true
+    };
+    private readonly NumericUpDown _idleMinutes = new()
+    {
+        Minimum = 1,
+        Maximum = 120,
+        Width = 72,
+        TextAlign = HorizontalAlignment.Right
+    };
     private readonly CheckBox _protection = new() { Text = "Enable protection after saving", AutoSize = true };
 
     internal SettingsForm(GuardConfig current, IReadOnlyList<MonitorDescriptor> monitors, MonitorCatalog catalog)
@@ -18,8 +30,8 @@ internal sealed class SettingsForm : Form
 
         Text = "Obsidian Display Guard — Settings";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(680, 540);
-        Size = new Size(760, 590);
+        MinimumSize = new Size(680, 600);
+        Size = new Size(760, 650);
         FormBorderStyle = FormBorderStyle.Sizable;
         MaximizeBox = false;
         AutoScaleMode = AutoScaleMode.Dpi;
@@ -60,15 +72,24 @@ internal sealed class SettingsForm : Form
         _launchAtSignIn.Checked = current.LaunchAtSignIn;
         _relaunch.Checked = current.RelaunchObsidian;
         _fullscreen.Checked = current.BorderlessFullscreen;
+        _idleOverlay.Checked = current.IdleOverlayEnabled;
+        _idleMinutes.Value = Math.Clamp(current.IdleOverlayDelayMinutes, 1, 120);
+        _idleMinutes.Enabled = _idleOverlay.Checked;
+        _idleOverlay.CheckedChanged += (_, _) => _idleMinutes.Enabled = _idleOverlay.Checked;
         _protection.Checked = current.ProtectionEnabled || !File.Exists(AppPaths.ConfigPath);
 
         var previewButton = new Button { Text = "Preview monitor", AutoSize = true };
         previewButton.Click += (_, _) => PreviewSelectedMonitor();
+        var previewIdleButton = new Button { Text = "Preview idle screen", AutoSize = true };
+        previewIdleButton.Click += (_, _) => PreviewIdleScreen();
         var browseButton = new Button { Text = "Browse…", AutoSize = true };
         browseButton.Click += (_, _) => BrowseForObsidian();
 
         var monitorRow = CreateFieldRow(_monitor, previewButton);
         var executableRow = CreateFieldRow(_obsidianPath, browseButton);
+        var idleDelayRow = CreateFieldRow(
+            CreateIdleDelayField(),
+            previewIdleButton);
 
         var options = new FlowLayoutPanel
         {
@@ -78,7 +99,14 @@ internal sealed class SettingsForm : Form
             Dock = DockStyle.Fill,
             Margin = new Padding(0)
         };
-        options.Controls.AddRange(new Control[] { _launchAtSignIn, _relaunch, _fullscreen, _protection });
+        options.Controls.AddRange(new Control[]
+        {
+            _launchAtSignIn,
+            _relaunch,
+            _fullscreen,
+            _idleOverlay,
+            _protection
+        });
 
         var saveButton = new Button { Text = "Save and apply", AutoSize = true, Padding = new Padding(8, 3, 8, 3) };
         saveButton.Click += (_, _) => SaveAndClose();
@@ -96,7 +124,7 @@ internal sealed class SettingsForm : Form
         var layout = new TableLayoutPanel
         {
             ColumnCount = 1,
-            RowCount = 11,
+            RowCount = 13,
             Dock = DockStyle.Fill,
             AutoScroll = true,
             Padding = new Padding(28)
@@ -112,6 +140,8 @@ internal sealed class SettingsForm : Form
         layout.Controls.Add(_vaultName);
         layout.Controls.Add(CreateLabel("Behavior"));
         layout.Controls.Add(options);
+        layout.Controls.Add(CreateLabel("Idle screen"));
+        layout.Controls.Add(idleDelayRow);
         layout.Controls.Add(buttons);
 
         Controls.Add(layout);
@@ -147,6 +177,32 @@ internal sealed class SettingsForm : Form
         return row;
     }
 
+    private Control CreateIdleDelayField()
+    {
+        var row = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0)
+        };
+        row.Controls.Add(new Label
+        {
+            Text = "Show after",
+            AutoSize = true,
+            Margin = new Padding(0, 6, 8, 0)
+        });
+        row.Controls.Add(_idleMinutes);
+        row.Controls.Add(new Label
+        {
+            Text = "minutes without Obsidian focus",
+            AutoSize = true,
+            Margin = new Padding(8, 6, 0, 0)
+        });
+        return row;
+    }
+
     private void PreviewSelectedMonitor()
     {
         if (_monitor.SelectedItem is not MonitorDescriptor selected)
@@ -155,6 +211,20 @@ internal sealed class SettingsForm : Form
         }
 
         using var preview = new MonitorPreviewForm(selected);
+        preview.ShowDialog(this);
+    }
+
+    private void PreviewIdleScreen()
+    {
+        if (_monitor.SelectedItem is not MonitorDescriptor selected)
+        {
+            return;
+        }
+
+        using var preview = new IdleOverlayForm(
+            selected,
+            Decimal.ToInt32(_idleMinutes.Value),
+            () => { });
         preview.ShowDialog(this);
     }
 
@@ -197,6 +267,8 @@ internal sealed class SettingsForm : Form
             LaunchAtSignIn = _launchAtSignIn.Checked,
             RelaunchObsidian = _relaunch.Checked,
             BorderlessFullscreen = _fullscreen.Checked,
+            IdleOverlayEnabled = _idleOverlay.Checked,
+            IdleOverlayDelayMinutes = Decimal.ToInt32(_idleMinutes.Value),
             ProtectionEnabled = _protection.Checked,
             Hotkey = "Ctrl+Alt+Shift+F12"
         };

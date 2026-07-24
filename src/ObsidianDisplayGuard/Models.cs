@@ -12,6 +12,8 @@ public sealed class GuardConfig
     public bool LaunchAtSignIn { get; set; } = true;
     public bool RelaunchObsidian { get; set; } = true;
     public bool BorderlessFullscreen { get; set; } = true;
+    public bool IdleOverlayEnabled { get; set; } = true;
+    public int IdleOverlayDelayMinutes { get; set; } = 5;
     public bool ProtectionEnabled { get; set; }
     public string Hotkey { get; set; } = "Ctrl+Alt+Shift+F12";
 
@@ -19,6 +21,10 @@ public sealed class GuardConfig
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(ObsidianExePath) &&
         ProtectedMonitor.IsConfigured;
+
+    [JsonIgnore]
+    public TimeSpan IdleOverlayDelay =>
+        TimeSpan.FromMinutes(Math.Clamp(IdleOverlayDelayMinutes, 1, 120));
 }
 
 public sealed class MonitorIdentity
